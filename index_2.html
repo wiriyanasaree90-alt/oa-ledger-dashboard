@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>OA Ledger — มอนิเตอร์</title>
+<style>
+  :root {
+    --bg: #0B0E1A;
+    --panel: #151833;
+    --gold: #FFD873;
+    --red: #FF4757;
+    --blue: #38BDF8;
+    --white: #F5F5F7;
+    --muted: #9AA0B4;
+    --loss: #F87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--white);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Sarabun, sans-serif;
+    padding: 16px;
+    padding-bottom: 150px;
+  }
+  .card {
+    background: var(--bg);
+    border: 2px solid var(--gold);
+    border-radius: 16px;
+    padding: 16px;
+    max-width: 480px;
+    margin: 0 auto 16px;
+  }
+  .pl-box { background: var(--panel); border-radius: 10px; padding: 14px; }
+  .pl-label { color: var(--gold); font-weight: bold; font-size: 13px; }
+  .pl-value { font-size: 40px; font-weight: bold; margin-top: 4px; }
+  .session-label { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  hr { border: none; border-top: 1px solid var(--gold); margin: 14px 0; }
+  .log-box { background: var(--panel); border: 1px solid #000; border-radius: 8px; padding: 10px; }
+  .log-title { color: var(--muted); font-size: 11px; font-weight: bold; margin-bottom: 6px; }
+  .log-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+  .dot { flex: 0 0 auto; font-size: 12px; }
+  .dot.red { color: var(--red); }
+  .dot.blue { color: var(--blue); }
+  .log-text { flex: 3; word-break: break-word; }
+  .log-name { flex: 2; color: var(--gold); text-align: right; word-break: break-word; }
+  .footer-row { display: flex; justify-content: space-between; margin-top: 12px; font-weight: bold; }
+  .footer-row .red { color: var(--red); }
+  .footer-row .blue { color: var(--blue); }
+  .empty { color: var(--muted); font-size: 13px; }
+  .inactive { text-align: center; color: var(--muted); padding: 40px 16px; }
+
+  .controls {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, var(--bg) 75%, transparent);
+    padding: 16px; display: flex; flex-direction: column; gap: 10px; align-items: center;
+  }
+  .text-row { display: flex; gap: 8px; width: 100%; max-width: 480px; }
+  .text-row input {
+    flex: 1; background: var(--panel); border: 1px solid var(--gold); border-radius: 8px;
+    color: var(--white); padding: 10px 12px; font-size: 15px;
+  }
+  .text-row button {
+    background: var(--gold); color: #1a1400; border: none; border-radius: 8px;
+    padding: 10px 16px; font-weight: bold; font-size: 14px;
+  }
+  #micBtn {
+    width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--gold);
+    background: var(--panel); color: var(--gold); font-size: 28px;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  #micBtn.recording { background: var(--red); color: var(--white); border-color: var(--red); }
+  #micStatus { color: var(--muted); font-size: 12px; min-height: 16px; }
+
+  .confirm-box {
+    width: 100%; max-width: 480px; background: var(--panel); border: 1px solid var(--gold);
+    border-radius: 10px; padding: 10px; display: none; flex-direction: column; gap: 8px;
+  }
+  .confirm-box.show { display: flex; }
+  .confirm-box input {
+    background: var(--bg); border: 1px solid var(--muted); border-radius: 6px;
+    color: var(--white); padding: 8px; font-size: 15px;
+  }
+  .confirm-actions { display: flex; gap: 8px; }
+  .confirm-actions button { flex: 1; border: none; border-radius: 6px; padding: 8px; font-weight: bold; }
+  .btn-confirm { background: var(--gold); color: #1a1400; }
+  .btn-cancel { background: #2A2E4A; color: var(--white); }
+  .noToken { text-align: center; color: var(--muted); padding: 40px 16px; }
+</style>
+</head>
+<body>
+  <div class="card" id="mainCard">
+    <div class="pl-box">
+      <div class="pl-label">ยอดได้เสียวันนี้</div>
+      <div class="pl-value" id="plValue">0</div>
+      <div class="session-label" id="sessionLabel"></div>
+    </div>
+    <hr />
+    <div class="log-box">
+      <div class="log-title" id="logTitle">บันทึกแผลเล่น</div>
+      <div id="logList"><div class="empty">กำลังโหลด...</div></div>
+    </div>
+    <div class="footer-row">
+      <span class="red" id="redWin">Redwin +0</span>
+      <span class="blue" id="blueWin">Bluewin +0</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="confirm-box" id="confirmBox">
+      <input type="text" id="confirmText" />
+      <div class="confirm-actions">
+        <button class="btn-cancel" id="btnCancel">ยกเลิก</button>
+        <button class="btn-confirm" id="btnConfirm">✓ บันทึกแผลนี้</button>
+      </div>
+    </div>
+    <div class="text-row">
+      <input type="text" id="typeInput" placeholder="พิมพ์แผลเล่น เช่น 32ตด20000ชื่อ" />
+      <button id="btnSend">ส่ง</button>
+    </div>
+    <button id="micBtn">🎤</button>
+    <div id="micStatus"></div>
+  </div>
+
+<script>
+// Supabase project base URL (the OA Ledger Bot project)
+const SUPABASE_BASE = "https://gxmdrzzhhvyatvccatva.supabase.co";
+const MONITOR_URL = SUPABASE_BASE + "/functions/v1/smart-action";
+const SUBMIT_URL = SUPABASE_BASE + "/functions/v1/quick-function";
+const STT_URL = SUPABASE_BASE + "/functions/v1/clever-worker";
+
+const params = new URLSearchParams(window.location.search);
+const TOKEN = params.get("g") || "";
+
+const $ = (id) => document.getElementById(id);
+
+if (!TOKEN) {
+  document.body.innerHTML = '<div class="noToken">ลิงก์นี้ไม่ถูกต้อง (ไม่มี token) กรุณาขอลิงก์ใหม่จากแอดมินในกลุ่ม LINE ครับ</div>';
+} else {
+  init();
+}
+
+function fmtPl(n) {
+  n = Number(n) || 0;
+  return (n >= 0 ? "+" : "") + n;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function render(data) {
+  if (!data.ok) {
+    $("mainCard").innerHTML = '<div class="inactive">' + escapeHtml(data.error || "โหลดข้อมูลไม่สำเร็จ") + '</div>';
+    return;
+  }
+  if (data.active === false) {
+    $("mainCard").innerHTML = '<div class="inactive">กลุ่มนี้ยังไม่เปิดใช้งาน หรือถูกปิดใช้งานอยู่ครับ</div>';
+    return;
+  }
+  $("plValue").textContent = fmtPl(data.todayTotal);
+  $("plValue").style.color = Number(data.todayTotal) >= 0 ? "#F5F5F7" : "#F87171";
+  $("sessionLabel").textContent = data.sessionLabel || "";
+  $("logTitle").textContent = "บันทึกแผลเล่น • ไฟต์ " + data.fightNo;
+
+  const entries = data.entries || [];
+  let redWin = 0, blueWin = 0;
+  const rows = entries.map((e) => {
+    const win = Number(e.potential_win) || 0;
+    const loss = Number(e.potential_loss) || 0;
+    if (e.color === "red") { redWin += win; blueWin += -loss; }
+    else { redWin += -loss; blueWin += win; }
+    const dotClass = e.color === "red" ? "red" : "blue";
+    const name = e.matched_name ? e.matched_name : "-";
+    return '<div class="log-row"><span class="dot ' + dotClass + '">●</span>' +
+      '<span class="log-text">' + escapeHtml(e.raw_text || "-") + '</span>' +
+      '<span class="log-name">' + escapeHtml(name) + '</span></div>';
+  });
+  $("logList").innerHTML = rows.length ? rows.join("") : '<div class="empty">ยังไม่มีแผลเล่นในไฟต์นี้</div>';
+  $("redWin").textContent = "Redwin " + fmtPl(redWin);
+  $("blueWin").textContent = "Bluewin " + fmtPl(blueWin);
+}
+
+async function poll() {
+  try {
+    const res = await fetch(MONITOR_URL + "?token=" + encodeURIComponent(TOKEN));
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function submitText(text) {
+  if (!text || !text.trim()) return;
+  $("micStatus").textContent = "กำลังบันทึก...";
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, text: text.trim() }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      $("micStatus").textContent = data.error || "บันทึกไม่สำเร็จ";
+      return;
+    }
+    $("micStatus").textContent = "บันทึกแล้ว ✓";
+    poll();
+  } catch (e) {
+    $("micStatus").textContent = "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง";
+    console.error(e);
+  }
+}
+
+function init() {
+  poll();
+  setInterval(poll, 4000);
+
+  $("btnSend").addEventListener("click", () => {
+    const v = $("typeInput").value;
+    $("typeInput").value = "";
+    submitText(v);
+  });
+  $("typeInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("btnSend").click();
+  });
+
+  $("btnCancel").addEventListener("click", () => {
+    $("confirmBox").classList.remove("show");
+  });
+  $("btnConfirm").addEventListener("click", () => {
+    const v = $("confirmText").value;
+    $("confirmBox").classList.remove("show");
+    submitText(v);
+  });
+
+  // --- press-and-hold voice recording ---
+  let mediaRecorder = null;
+  let chunks = [];
+  let recording = false;
+
+  async function startRecording() {
+    if (recording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      chunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        if (blob.size < 500) {
+          $("micStatus").textContent = "ไม่ได้ยินเสียงครับ ลองใหม่อีกครั้ง";
+          return;
+        }
+        $("micStatus").textContent = "กำลังถอดเสียง...";
+        const form = new FormData();
+        form.append("audio", blob, "clip.webm");
+        try {
+          const res = await fetch(STT_URL, { method: "POST", body: form });
+          const data = await res.json();
+          if (!data.ok || !data.text) {
+            $("micStatus").textContent = data.error || "ถอดเสียงไม่สำเร็จ ลองใหม่อีกครั้ง";
+            return;
+          }
+          $("micStatus").textContent = "";
+          $("confirmText").value = data.text;
+          $("confirmBox").classList.add("show");
+        } catch (e) {
+          $("micStatus").textContent = "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง";
+          console.error(e);
+        }
+      };
+      mediaRecorder.start();
+      recording = true;
+      $("micBtn").classList.add("recording");
+      $("micStatus").textContent = "กำลังบันทึกเสียง...";
+    } catch (e) {
+      $("micStatus").textContent = "ไม่สามารถเข้าถึงไมโครโฟนได้ครับ";
+      console.error(e);
+    }
+  }
+
+  function stopRecording() {
+    if (!recording) return;
+    recording = false;
+    $("micBtn").classList.remove("recording");
+    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  }
+
+  const micBtn = $("micBtn");
+  micBtn.addEventListener("mousedown", startRecording);
+  micBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startRecording(); }, { passive: false });
+  micBtn.addEventListener("mouseup", stopRecording);
+  micBtn.addEventListener("mouseleave", stopRecording);
+  micBtn.addEventListener("touchend", (e) => { e.preventDefault(); stopRecording(); }, { passive: false });
+  micBtn.addEventListener("touchcancel", stopRecording);
+}
+</script>
+</body>
+</html>
