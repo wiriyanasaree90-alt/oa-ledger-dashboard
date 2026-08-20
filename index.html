@@ -8,7 +8,9 @@
   :root {
     --bg: #0B0E1A;
     --panel: #151833;
+    --panel2: #1C2044;
     --gold: #FFD873;
+    --gold-dim: #B8860B;
     --red: #FF4757;
     --blue: #38BDF8;
     --white: #F5F5F7;
@@ -18,43 +20,124 @@
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--bg);
+    background:
+      radial-gradient(ellipse at top, #171B37 0%, var(--bg) 55%),
+      var(--bg);
     color: var(--white);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Sarabun, sans-serif;
     padding: 16px;
-    padding-bottom: 150px;
+    padding-bottom: 260px;
   }
+
+  /* ---------------- header / brand ---------------- */
+  .title-wrap { text-align: center; margin: 4px 0 16px; }
+  .brand-title {
+    display: inline-block;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, #B8860B, #FFF3C4, #FFD873, #FFF3C4, #B8860B);
+    background-size: 300% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 5s linear infinite;
+    filter: drop-shadow(0 0 10px rgba(255, 216, 115, 0.45));
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% center; }
+    100% { background-position: 300% center; }
+  }
+  .brand-sub {
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .live-row {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 8px; font-size: 11px; color: var(--muted); letter-spacing: 1px;
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 8px var(--red);
+    animation: blink 1.3s ease-in-out infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+  /* ---------------- main card ---------------- */
   .card {
-    background: var(--bg);
-    border: 2px solid var(--gold);
-    border-radius: 16px;
-    padding: 16px;
+    background: linear-gradient(180deg, #12142A, #0B0E1A);
+    border: 1px solid var(--gold);
+    border-radius: 18px;
+    padding: 18px;
     max-width: 480px;
     margin: 0 auto 16px;
+    animation: cardGlow 3.2s ease-in-out infinite;
   }
-  .pl-box { background: var(--panel); border-radius: 10px; padding: 14px; }
-  .pl-label { color: var(--gold); font-weight: bold; font-size: 13px; }
-  .pl-value { font-size: 40px; font-weight: bold; margin-top: 4px; }
-  .session-label { color: var(--muted); font-size: 12px; margin-top: 6px; }
-  hr { border: none; border-top: 1px solid var(--gold); margin: 14px 0; }
-  .log-box { background: var(--panel); border: 1px solid #000; border-radius: 8px; padding: 10px; }
-  .log-title { color: var(--muted); font-size: 11px; font-weight: bold; margin-bottom: 6px; }
-  .log-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+  @keyframes cardGlow {
+    0%, 100% { box-shadow: 0 0 10px rgba(255, 216, 115, 0.12), inset 0 0 20px rgba(255, 216, 115, 0.02); }
+    50% { box-shadow: 0 0 26px rgba(255, 216, 115, 0.35), inset 0 0 20px rgba(255, 216, 115, 0.06); }
+  }
+  .pl-box { background: var(--panel); border-radius: 12px; padding: 16px; border: 1px solid #24284d; }
+  .pl-label { color: var(--gold); font-weight: bold; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
+  .pl-value {
+    font-size: 42px; font-weight: 800; margin-top: 6px;
+    text-shadow: 0 0 16px currentColor;
+  }
+  .session-label { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  hr { border: none; border-top: 1px solid #2A2E4A; margin: 16px 0; }
+  .log-box { background: var(--panel); border: 1px solid #24284d; border-radius: 10px; padding: 12px; }
+  .log-title { color: var(--gold); font-size: 11px; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .log-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #1c2044; }
+  .log-row:last-child { border-bottom: none; }
   .dot { flex: 0 0 auto; font-size: 12px; }
-  .dot.red { color: var(--red); }
-  .dot.blue { color: var(--blue); }
+  .dot.red { color: var(--red); text-shadow: 0 0 6px var(--red); }
+  .dot.blue { color: var(--blue); text-shadow: 0 0 6px var(--blue); }
   .log-text { flex: 3; word-break: break-word; }
   .log-name { flex: 2; color: var(--gold); text-align: right; word-break: break-word; }
-  .footer-row { display: flex; justify-content: space-between; margin-top: 12px; font-weight: bold; }
-  .footer-row .red { color: var(--red); }
-  .footer-row .blue { color: var(--blue); }
+  .cancel-entry-btn {
+    flex: 0 0 auto; background: transparent; border: 1px solid var(--red); color: var(--red);
+    border-radius: 6px; font-size: 10px; padding: 4px 7px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .cancel-entry-btn:active { background: var(--red); color: var(--white); }
+  .footer-row { display: flex; justify-content: space-between; margin-top: 14px; font-weight: bold; font-size: 15px; }
+  .footer-row .red { color: var(--red); text-shadow: 0 0 8px rgba(255, 71, 87, 0.5); }
+  .footer-row .blue { color: var(--blue); text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
   .empty { color: var(--muted); font-size: 13px; }
   .inactive { text-align: center; color: var(--muted); padding: 40px 16px; }
 
+  /* ---------------- action buttons (ST / ด / น / สม / End) ---------------- */
+  .action-panel {
+    width: 100%; max-width: 480px; margin: 0 auto 12px;
+    background: linear-gradient(180deg, #12142A, #0B0E1A);
+    border: 1px solid #2A2E4A; border-radius: 14px; padding: 12px;
+  }
+  .action-panel-title {
+    color: var(--muted); font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    text-align: center; margin-bottom: 10px;
+  }
+  .action-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .action-btn {
+    border-radius: 10px; padding: 10px 2px; font-weight: 800; font-size: 11px;
+    letter-spacing: 0.5px; text-transform: uppercase; border: 1px solid var(--gold);
+    background: linear-gradient(180deg, #1c1f3d, #0f1226); color: var(--gold);
+    transition: transform 0.1s ease;
+  }
+  .action-btn:active { transform: scale(0.95); }
+  .action-btn.start { color: #1a1400; background: linear-gradient(180deg, #FFE9A8, #D9A93A); border-color: #D9A93A;
+    box-shadow: 0 0 12px rgba(217, 169, 58, 0.5); }
+  .action-btn.red { border-color: var(--red); color: var(--red); }
+  .action-btn.blue { border-color: var(--blue); color: var(--blue); }
+  .action-btn.draw { border-color: var(--muted); color: var(--white); }
+  .action-btn.end { border-color: var(--gold-dim); color: var(--gold); }
+
+  /* ---------------- bottom controls ---------------- */
   .controls {
     position: fixed; bottom: 0; left: 0; right: 0;
-    background: linear-gradient(to top, var(--bg) 75%, transparent);
-    padding: 16px; display: flex; flex-direction: column; gap: 10px; align-items: center;
+    background: linear-gradient(to top, var(--bg) 78%, transparent);
+    padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 10px; align-items: center;
   }
   .text-row { display: flex; gap: 8px; width: 100%; max-width: 480px; }
   .text-row input {
@@ -62,16 +145,22 @@
     color: var(--white); padding: 10px 12px; font-size: 15px;
   }
   .text-row button {
-    background: var(--gold); color: #1a1400; border: none; border-radius: 8px;
-    padding: 10px 16px; font-weight: bold; font-size: 14px;
+    background: linear-gradient(180deg, #FFE9A8, #D9A93A); color: #1a1400; border: none; border-radius: 8px;
+    padding: 10px 16px; font-weight: 800; font-size: 14px;
   }
   #micBtn {
     width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--gold);
     background: var(--panel); color: var(--gold); font-size: 28px;
     display: flex; align-items: center; justify-content: center;
     user-select: none; -webkit-user-select: none; touch-action: none;
+    box-shadow: 0 0 14px rgba(255, 216, 115, 0.25);
   }
-  #micBtn.recording { background: var(--red); color: var(--white); border-color: var(--red); }
+  #micBtn.recording { background: var(--red); color: var(--white); border-color: var(--red);
+    animation: micPulse 1s ease-in-out infinite; }
+  @keyframes micPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
+    50% { box-shadow: 0 0 24px rgba(255, 71, 87, 0.9); }
+  }
   #micStatus { color: var(--muted); font-size: 12px; min-height: 16px; }
 
   .confirm-box {
@@ -88,9 +177,47 @@
   .btn-confirm { background: var(--gold); color: #1a1400; }
   .btn-cancel { background: #2A2E4A; color: var(--white); }
   .noToken { text-align: center; color: var(--muted); padding: 40px 16px; }
+
+  /* ---------------- modal overlay (confirm actions + day-end summary) ---------------- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78);
+    display: none; align-items: center; justify-content: center; padding: 20px; z-index: 100;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: linear-gradient(180deg, #171A38, #0B0E1A);
+    border: 1px solid var(--gold); border-radius: 16px; padding: 20px;
+    max-width: 420px; width: 100%; box-shadow: 0 0 34px rgba(255, 216, 115, 0.3);
+    max-height: 80vh; overflow-y: auto;
+  }
+  .modal-title {
+    color: var(--gold); font-weight: 800; font-size: 16px; margin-bottom: 4px;
+    text-align: center; letter-spacing: 1.5px; text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255, 216, 115, 0.4);
+  }
+  .modal-sub { text-align: center; color: var(--muted); font-size: 11px; margin-bottom: 14px; }
+  .modal-msg { color: var(--white); font-size: 14px; margin-bottom: 18px; text-align: center; line-height: 1.6; }
+  .modal-actions { display: flex; gap: 8px; }
+  .modal-actions button { flex: 1; border: none; border-radius: 8px; padding: 11px; font-weight: 800; font-size: 14px; }
+  .modal-btn-confirm { background: linear-gradient(180deg, #FFE9A8, #D9A93A); color: #1a1400; }
+  .modal-btn-cancel { background: #2A2E4A; color: var(--white); }
+  .modal-btn-close { background: linear-gradient(180deg, #FFE9A8, #D9A93A); color: #1a1400; width: 100%; margin-top: 4px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #2A2E4A; font-size: 14px; }
+  .summary-total {
+    display: flex; justify-content: space-between; padding-top: 12px; margin-top: 8px;
+    border-top: 1px solid var(--gold); font-weight: 800; font-size: 17px; color: var(--gold);
+    text-shadow: 0 0 8px rgba(255, 216, 115, 0.4);
+  }
+  .summary-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 12px 0; }
 </style>
 </head>
 <body>
+  <div class="title-wrap">
+    <div class="brand-title">OA LEDGER</div>
+    <div class="brand-sub">Private Ledger Club</div>
+    <div class="live-row"><span class="live-dot"></span>LIVE</div>
+  </div>
+
   <div class="card" id="mainCard">
     <div class="pl-box">
       <div class="pl-label">ยอดได้เสียวันนี้</div>
@@ -108,11 +235,22 @@
     </div>
   </div>
 
+  <div class="action-panel" id="actionPanel">
+    <div class="action-panel-title">คำสั่งควบคุมไฟต์</div>
+    <div class="action-grid">
+      <button class="action-btn start" id="btnST">ST</button>
+      <button class="action-btn red" id="btnRed">/ด</button>
+      <button class="action-btn blue" id="btnBlue">/น</button>
+      <button class="action-btn draw" id="btnDraw">/สม</button>
+      <button class="action-btn end" id="btnEnd">End</button>
+    </div>
+  </div>
+
   <div class="controls">
     <div class="confirm-box" id="confirmBox">
       <input type="text" id="confirmText" />
       <div class="confirm-actions">
-        <button class="btn-cancel" id="btnCancel">ยกเลิก</button>
+        <button class="btn-cancel" id="btnCancelVoice">ยกเลิก</button>
         <button class="btn-confirm" id="btnConfirm">✓ บันทึกแผลนี้</button>
       </div>
     </div>
@@ -122,6 +260,29 @@
     </div>
     <button id="micBtn">🎤</button>
     <div id="micStatus"></div>
+  </div>
+
+  <!-- generic confirm modal, used for ST / settle / cancel-entry -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+      <div class="modal-title" id="confirmModalTitle">ยืนยัน</div>
+      <div class="modal-msg" id="confirmModalMsg"></div>
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" id="confirmModalNo">ยกเลิก</button>
+        <button class="modal-btn-confirm" id="confirmModalYes">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- day-end summary modal ("End") -->
+  <div class="modal-overlay" id="endModal">
+    <div class="modal-box">
+      <div class="modal-title">สรุปยอดวันนี้</div>
+      <div class="modal-sub" id="endDateLabel"></div>
+      <div id="endFightList"></div>
+      <div class="summary-total"><span>รวมสุทธิ</span><span id="endGrandTotal">+0</span></div>
+      <button class="modal-btn-close" id="endModalClose">ปิด</button>
+    </div>
   </div>
 
 <script>
@@ -154,12 +315,15 @@ function escapeHtml(s) {
 function render(data) {
   if (!data.ok) {
     $("mainCard").innerHTML = '<div class="inactive">' + escapeHtml(data.error || "โหลดข้อมูลไม่สำเร็จ") + '</div>';
+    $("actionPanel").style.display = "none";
     return;
   }
   if (data.active === false) {
     $("mainCard").innerHTML = '<div class="inactive">กลุ่มนี้ยังไม่เปิดใช้งาน หรือถูกปิดใช้งานอยู่ครับ</div>';
+    $("actionPanel").style.display = "none";
     return;
   }
+  $("actionPanel").style.display = "";
   $("plValue").textContent = fmtPl(data.todayTotal);
   $("plValue").style.color = Number(data.todayTotal) >= 0 ? "#F5F5F7" : "#F87171";
   $("sessionLabel").textContent = data.sessionLabel || "";
@@ -176,11 +340,21 @@ function render(data) {
     const name = e.matched_name ? e.matched_name : "-";
     return '<div class="log-row"><span class="dot ' + dotClass + '">●</span>' +
       '<span class="log-text">' + escapeHtml(e.raw_text || "-") + '</span>' +
-      '<span class="log-name">' + escapeHtml(name) + '</span></div>';
+      '<span class="log-name">' + escapeHtml(name) + '</span>' +
+      '<button class="cancel-entry-btn" data-cancel-id="' + escapeHtml(e.id) + '">ยกเลิก</button></div>';
   });
   $("logList").innerHTML = rows.length ? rows.join("") : '<div class="empty">ยังไม่มีแผลเล่นในไฟต์นี้</div>';
   $("redWin").textContent = "Redwin " + fmtPl(redWin);
   $("blueWin").textContent = "Bluewin " + fmtPl(blueWin);
+
+  document.querySelectorAll("[data-cancel-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-cancel-id");
+      showConfirmModal("ยกเลิกแผลนี้?", "แผลนี้จะถูกตัดออกจากบันทึก ยืนยันหรือไม่?", () => {
+        submitAction({ type: "cancel", entryId: id }, "ยกเลิกแผลแล้ว ✓");
+      });
+    });
+  });
 }
 
 async function poll() {
@@ -200,7 +374,7 @@ async function submitText(text) {
     const res = await fetch(SUBMIT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: TOKEN, text: text.trim() }),
+      body: JSON.stringify({ token: TOKEN, type: "bet", text: text.trim() }),
     });
     const data = await res.json();
     if (!data.ok) {
@@ -213,6 +387,62 @@ async function submitText(text) {
     $("micStatus").textContent = "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง";
     console.error(e);
   }
+}
+
+// generic action submitter for cancel / start / settle / end
+async function submitAction(payload, successStatus) {
+  $("micStatus").textContent = "กำลังดำเนินการ...";
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, ...payload }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      $("micStatus").textContent = data.error || "ดำเนินการไม่สำเร็จ";
+      return;
+    }
+    if (payload.type === "end") {
+      showEndModal(data);
+      $("micStatus").textContent = "";
+      return;
+    }
+    $("micStatus").textContent = successStatus || "สำเร็จ ✓";
+    poll();
+  } catch (e) {
+    $("micStatus").textContent = "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง";
+    console.error(e);
+  }
+}
+
+// ---------------- generic confirm modal ----------------
+let pendingConfirmAction = null;
+function showConfirmModal(title, msg, onYes) {
+  $("confirmModalTitle").textContent = title;
+  $("confirmModalMsg").textContent = msg;
+  pendingConfirmAction = onYes;
+  $("confirmModal").classList.add("show");
+}
+function hideConfirmModal() {
+  $("confirmModal").classList.remove("show");
+  pendingConfirmAction = null;
+}
+
+// ---------------- day-end summary modal ----------------
+function showEndModal(data) {
+  $("endDateLabel").textContent = data.dateLabel || "";
+  const fights = data.fights || [];
+  if (!fights.length) {
+    $("endFightList").innerHTML = '<div class="summary-empty">ยังไม่มีไฟต์ที่สรุปผลวันนี้ครับ</div>';
+  } else {
+    $("endFightList").innerHTML = fights.map((f) =>
+      '<div class="summary-row"><span>ไฟต์ ' + f.fightNo + '</span><span>' + fmtPl(f.subtotal) + '</span></div>'
+    ).join("");
+  }
+  $("endGrandTotal").textContent = fmtPl(data.grandTotal);
+  $("endGrandTotal").style.color = Number(data.grandTotal) >= 0 ? "var(--gold)" : "var(--loss)";
+  $("endModal").classList.add("show");
 }
 
 function init() {
@@ -228,13 +458,48 @@ function init() {
     if (e.key === "Enter") $("btnSend").click();
   });
 
-  $("btnCancel").addEventListener("click", () => {
+  $("btnCancelVoice").addEventListener("click", () => {
     $("confirmBox").classList.remove("show");
   });
   $("btnConfirm").addEventListener("click", () => {
     const v = $("confirmText").value;
     $("confirmBox").classList.remove("show");
     submitText(v);
+  });
+
+  // --- ST / /ด / /น / /สม / End buttons (mirror LINE commands) ---
+  $("btnST").addEventListener("click", () => {
+    showConfirmModal("เริ่มรอบใหม่ (ST)", "ยอดได้เสียวันนี้จะเริ่มนับใหม่จากตอนนี้ เริ่มไฟต์ 1 ยืนยันหรือไม่?", () => {
+      submitAction({ type: "start" }, "เริ่มรอบใหม่แล้ว 🥊");
+    });
+  });
+  $("btnRed").addEventListener("click", () => {
+    showConfirmModal("สรุปผล: แดงชนะ", "ยืนยันผลไฟต์นี้เป็น แดงชนะ ใช่หรือไม่?", () => {
+      submitAction({ type: "settle", result: "red" }, "สรุปผล แดงชนะ ✓");
+    });
+  });
+  $("btnBlue").addEventListener("click", () => {
+    showConfirmModal("สรุปผล: น้ำเงินชนะ", "ยืนยันผลไฟต์นี้เป็น น้ำเงินชนะ ใช่หรือไม่?", () => {
+      submitAction({ type: "settle", result: "blue" }, "สรุปผล น้ำเงินชนะ ✓");
+    });
+  });
+  $("btnDraw").addEventListener("click", () => {
+    showConfirmModal("สรุปผล: เสมอ", "ยืนยันผลไฟต์นี้เป็น เสมอ ใช่หรือไม่?", () => {
+      submitAction({ type: "settle", result: "draw" }, "สรุปผล เสมอ ✓");
+    });
+  });
+  $("btnEnd").addEventListener("click", () => {
+    submitAction({ type: "end" });
+  });
+
+  $("confirmModalNo").addEventListener("click", hideConfirmModal);
+  $("confirmModalYes").addEventListener("click", () => {
+    const action = pendingConfirmAction;
+    hideConfirmModal();
+    if (action) action();
+  });
+  $("endModalClose").addEventListener("click", () => {
+    $("endModal").classList.remove("show");
   });
 
   // --- press-and-hold voice recording ---
