@@ -209,6 +209,22 @@
     text-shadow: 0 0 8px rgba(255, 216, 115, 0.4);
   }
   .summary-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 12px 0; }
+
+  /* ---------------- payout checklist modal (after settling a match) ---------------- */
+  .payout-row {
+    display: flex; align-items: center; gap: 10px; padding: 9px 0;
+    border-bottom: 1px dashed #2A2E4A; font-size: 13px; cursor: pointer;
+  }
+  .payout-row:last-child { border-bottom: none; }
+  .payout-row input[type="checkbox"] {
+    width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--gold);
+  }
+  .payout-text { flex: 3; word-break: break-word; }
+  .payout-name { flex: 2; color: var(--gold); text-align: right; word-break: break-word; font-size: 12px; }
+  .payout-pl { flex: 0 0 auto; min-width: 58px; text-align: right; font-weight: 800; }
+  .payout-row.checked { opacity: 0.45; }
+  .payout-row.checked .payout-text { text-decoration: line-through; }
+  #payoutContinueBtn:disabled { opacity: 0.35; }
 </style>
 </head>
 <body>
@@ -285,6 +301,17 @@
     </div>
   </div>
 
+  <!-- payout checklist modal (shown right after settling /ด /น /สม, before moving to next match) -->
+  <div class="modal-overlay" id="payoutModal">
+    <div class="modal-box">
+      <div class="modal-title" id="payoutTitle">สรุปคู่นี้</div>
+      <div class="modal-sub" id="payoutSub">ติ๊กให้ครบทุกแผลก่อนไปคู่ถัดไป (กันลืมจ่าย/เก็บเงิน)</div>
+      <div id="payoutList"></div>
+      <div class="summary-total"><span>รวมคู่นี้</span><span id="payoutSubtotal">+0</span></div>
+      <button class="modal-btn-close" id="payoutContinueBtn" disabled>ติ๊กให้ครบทุกแผลก่อน</button>
+    </div>
+  </div>
+
 <script>
 // Supabase project base URL (the OA Ledger Bot project)
 const SUPABASE_BASE = "https://gxmdrzzhhvyatvccatva.supabase.co";
@@ -310,6 +337,17 @@ function fmtPl(n) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// shows the bot's own compact notation (e.g. "61ตด4000") instead of the raw
+// spoken/typed text, so the rate code is always clear at a glance and never
+// gets lost or misread inside a longer sentence — falls back to raw_text if
+// the row is missing rate_code/keyword/amount for any reason
+function normalizeEntryText(e) {
+  if (e.rate_code != null && e.keyword && e.amount != null) {
+    return String(e.rate_code) + String(e.keyword) + String(e.amount);
+  }
+  return e.raw_text || "-";
 }
 
 function render(data) {
@@ -339,7 +377,7 @@ function render(data) {
     const dotClass = e.color === "red" ? "red" : "blue";
     const name = e.matched_name ? e.matched_name : "-";
     return '<div class="log-row"><span class="dot ' + dotClass + '">●</span>' +
-      '<span class="log-text">' + escapeHtml(e.raw_text || "-") + '</span>' +
+      '<span class="log-text">' + escapeHtml(normalizeEntryText(e)) + '</span>' +
       '<span class="log-name">' + escapeHtml(name) + '</span>' +
       '<button class="cancel-entry-btn" data-cancel-id="' + escapeHtml(e.id) + '">ยกเลิก</button></div>';
   });
@@ -408,6 +446,11 @@ async function submitAction(payload, successStatus) {
       $("micStatus").textContent = "";
       return;
     }
+    if (payload.type === "settle") {
+      $("micStatus").textContent = "";
+      showPayoutChecklist(data);
+      return;
+    }
     $("micStatus").textContent = successStatus || "สำเร็จ ✓";
     poll();
   } catch (e) {
@@ -437,12 +480,55 @@ function showEndModal(data) {
     $("endFightList").innerHTML = '<div class="summary-empty">ยังไม่มีไฟต์ที่สรุปผลวันนี้ครับ</div>';
   } else {
     $("endFightList").innerHTML = fights.map((f) =>
-      '<div class="summary-row"><span>ไฟต์ ' + f.fightNo + '</span><span>' + fmtPl(f.subtotal) + '</span></div>'
+      '<div class="summary-row"><span>คู่ที่ ' + f.fightNo + '</span><span>' + fmtPl(f.subtotal) + '</span></div>'
     ).join("");
   }
   $("endGrandTotal").textContent = fmtPl(data.grandTotal);
   $("endGrandTotal").style.color = Number(data.grandTotal) >= 0 ? "var(--gold)" : "var(--loss)";
   $("endModal").classList.add("show");
+}
+
+// ---------------- payout checklist modal (shown right after settling a match) ----------------
+function showPayoutChecklist(data) {
+  const rows = data.settledRows || [];
+  $("payoutTitle").textContent = "สรุปคู่ที่ " + (data.settledFightNo != null ? data.settledFightNo : "") + " — " + (data.resultLabel || "");
+
+  let subtotal = 0;
+  const html = rows.map((r, i) => {
+    const pl = Number(r.actual_pl) || 0;
+    subtotal += pl;
+    const dotClass = r.color === "red" ? "red" : "blue";
+    const name = r.matched_name ? r.matched_name : "-";
+    const plColor = pl >= 0 ? "var(--gold)" : "var(--loss)";
+    return '<label class="payout-row" data-row="' + i + '">' +
+      '<input type="checkbox" class="payout-check" data-idx="' + i + '" />' +
+      '<span class="dot ' + dotClass + '">●</span>' +
+      '<span class="payout-text">' + escapeHtml(normalizeEntryText(r)) + '</span>' +
+      '<span class="payout-name">' + escapeHtml(name) + '</span>' +
+      '<span class="payout-pl" style="color:' + plColor + '">' + fmtPl(pl) + '</span>' +
+      '</label>';
+  }).join("");
+  $("payoutList").innerHTML = html || '<div class="summary-empty">ไม่มีแผลในคู่นี้ครับ</div>';
+  $("payoutSubtotal").textContent = fmtPl(subtotal);
+  $("payoutSubtotal").style.color = subtotal >= 0 ? "var(--gold)" : "var(--loss)";
+
+  const btn = $("payoutContinueBtn");
+  const checkboxes = Array.from(document.querySelectorAll(".payout-check"));
+  function updateBtn() {
+    const allChecked = checkboxes.length === 0 || checkboxes.every((c) => c.checked);
+    btn.disabled = !allChecked;
+    btn.textContent = allChecked ? "ถัดไป (เริ่มคู่ใหม่)" : "ติ๊กให้ครบทุกแผลก่อน";
+  }
+  checkboxes.forEach((c) => {
+    c.addEventListener("change", () => {
+      const row = c.closest(".payout-row");
+      if (row) row.classList.toggle("checked", c.checked);
+      updateBtn();
+    });
+  });
+  updateBtn();
+
+  $("payoutModal").classList.add("show");
 }
 
 function init() {
@@ -500,6 +586,11 @@ function init() {
   });
   $("endModalClose").addEventListener("click", () => {
     $("endModal").classList.remove("show");
+  });
+  $("payoutContinueBtn").addEventListener("click", () => {
+    if ($("payoutContinueBtn").disabled) return;
+    $("payoutModal").classList.remove("show");
+    poll();
   });
 
   // --- press-and-hold voice recording ---
