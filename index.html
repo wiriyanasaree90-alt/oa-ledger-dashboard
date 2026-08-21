@@ -603,18 +603,39 @@ function init() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunks = [];
-      mediaRecorder = new MediaRecorder(stream);
+      // Safari (incl. iPhone / the LINE in-app browser) does not support
+      // recording audio/webm at all -- it silently records audio/mp4 (AAC)
+      // instead. Ask for webm/opus first since that's what most browsers
+      // use, but fall back to whatever the browser actually supports so we
+      // never end up mislabeling the real format later.
+      const PREFERRED_MIME_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/aac"];
+      const chosenMimeType = PREFERRED_MIME_TYPES.find(
+        (t) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t),
+      );
+      mediaRecorder = chosenMimeType ? new MediaRecorder(stream, { mimeType: chosenMimeType }) : new MediaRecorder(stream);
       mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunks, { type: "audio/webm" });
+        // Use the mimeType the recorder ACTUALLY produced, not a hardcoded
+        // guess -- on Safari this is audio/mp4 even though we asked for
+        // webm/opus above, and mislabeling the blob as webm makes the STT
+        // backend fail to decode it (this was the iPhone "STT ล้มเหลว" bug).
+        const actualMimeType = mediaRecorder.mimeType || "audio/webm";
+        const ext = actualMimeType.includes("mp4")
+          ? "mp4"
+          : actualMimeType.includes("aac")
+          ? "aac"
+          : actualMimeType.includes("ogg")
+          ? "ogg"
+          : "webm";
+        const blob = new Blob(chunks, { type: actualMimeType });
         if (blob.size < 500) {
           $("micStatus").textContent = "ไม่ได้ยินเสียงครับ ลองใหม่อีกครั้ง";
           return;
         }
         $("micStatus").textContent = "กำลังถอดเสียง...";
         const form = new FormData();
-        form.append("audio", blob, "clip.webm");
+        form.append("audio", blob, `clip.${ext}`);
         try {
           const res = await fetch(STT_URL, { method: "POST", body: form });
           const data = await res.json();
