@@ -106,6 +106,7 @@
   .footer-row { display: flex; justify-content: space-between; margin-top: 14px; font-weight: bold; font-size: 15px; }
   .footer-row .red { color: var(--red); text-shadow: 0 0 8px rgba(255, 71, 87, 0.5); }
   .footer-row .blue { color: var(--blue); text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
+  .footer-row .draw { color: var(--gold); text-shadow: 0 0 8px rgba(255, 216, 115, 0.5); text-align: center; }
   .empty { color: var(--muted); font-size: 13px; }
   .inactive { text-align: center; color: var(--muted); padding: 40px 16px; }
 
@@ -292,6 +293,7 @@
     </div>
     <div class="footer-row">
       <span class="red" id="redWin">Redwin +0</span>
+      <span class="draw" id="drawWin">Draw +0</span>
       <span class="blue" id="blueWin">Bluewin +0</span>
     </div>
   </div>
@@ -443,12 +445,17 @@ function render(data) {
   $("logTitle").textContent = "บันทึกแผลเล่น • ไฟต์ " + data.fightNo;
 
   const entries = data.entries || [];
-  let redWin = 0, blueWin = 0;
+  let redWin = 0, blueWin = 0, drawWin = 0;
   const rows = entries.map((e) => {
     const win = Number(e.potential_win) || 0;
     const loss = Number(e.potential_loss) || 0;
     if (e.color === "red") { redWin += win; blueWin += -loss; }
     else { redWin += -loss; blueWin += win; }
+    // Draw total: what the running P&L would be if this fight ends in a draw
+    // right now -- สข wins at its own rate, สส loses at its own rate, no
+    // marker keeps the existing void/refund-on-draw behavior (contributes 0).
+    if (e.draw_rule === "สข") drawWin += win;
+    else if (e.draw_rule === "สส") drawWin += -loss;
     const dotClass = e.color === "red" ? "red" : "blue";
     const name = e.matched_name ? e.matched_name : "-";
     return '<div class="log-row"><span class="dot ' + dotClass + '">●</span>' +
@@ -459,6 +466,7 @@ function render(data) {
   });
   $("logList").innerHTML = rows.length ? rows.join("") : '<div class="empty">ยังไม่มีแผลเล่นในไฟต์นี้</div>';
   $("redWin").textContent = "Redwin " + fmtPl(redWin);
+  $("drawWin").textContent = "Draw " + fmtPl(drawWin);
   $("blueWin").textContent = "Bluewin " + fmtPl(blueWin);
 
   document.querySelectorAll("[data-cancel-id]").forEach((btn) => {
