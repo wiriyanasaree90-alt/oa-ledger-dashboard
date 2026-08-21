@@ -177,6 +177,11 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 13px;
   }
   .cc-row:last-child { border-bottom: none; }
+  .cc-row:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+  .cc-idx {
+    flex: 0 0 16px; color: var(--muted); font-size: 11px; text-align: center;
+  }
+  .cc-header .cc-idx { color: var(--gold); font-weight: 800; }
   .cc-name {
     flex: 2; color: var(--white); word-break: break-word;
     border-right: 1px solid rgba(255, 255, 255, 0.08); padding-right: 6px;
@@ -376,7 +381,7 @@
   </div>
 
   <button class="person-summary-btn" id="btnPersonSummary">📊 รายบุคคล</button>
-  <button class="cc-btn" id="btnCc">📒 CC</button>
+  <button class="cc-btn" id="btnCc">📒 ตารางสรุป</button>
 
   <div class="controls">
     <div class="confirm-box" id="confirmBox">
@@ -470,6 +475,7 @@
       </div>
       <div class="cc-table-wrap">
         <div class="cc-header">
+          <span class="cc-idx">#</span>
           <span class="cc-name">ชื่อ</span>
           <span class="cc-cell">ยอดบวก</span>
           <span class="cc-cell">ยอดลบ</span>
@@ -479,6 +485,10 @@
         <div id="ccList"></div>
       </div>
       <div class="cc-add-row" id="ccAddRow">
+        <div class="text-row" id="ccAddInputRow" style="display:none; margin-bottom:8px;">
+          <input type="text" id="ccAddNameInput" placeholder="ชื่อลูกค้าใหม่" />
+          <button type="button" id="ccAddNameConfirmBtn">เพิ่ม</button>
+        </div>
         <button type="button" id="ccAddNameBtn">+ เพิ่มชื่อ</button>
       </div>
       <div class="summary-total"><span>รวมคงเหลือ</span><span id="ccGrandTotal">+0</span></div>
@@ -886,6 +896,7 @@ function showCcModal() {
   ccHistoryDate = null;
   $("ccDateInput").value = "";
   $("ccLiveBtn").style.display = "none";
+  hideCcAddInput();
   loadCcState();
 }
 
@@ -913,6 +924,7 @@ async function loadCcState(dateStr) {
 }
 
 function renderCcState(data) {
+  hideCcAddInput();
   $("ccSub").textContent = ccIsHistory
     ? "ย้อนหลังวันที่ " + escapeHtml(ccHistoryDate || "")
     : (data.sessionLabel || "ตั้งแต่เริ่มรอบล่าสุด (ST)");
@@ -923,7 +935,7 @@ function renderCcState(data) {
   if (!people.length) {
     $("ccList").innerHTML = '<div class="summary-empty">ยังไม่มีรายชื่อในตาราง CC ' + (ccIsHistory ? "วันนี้" : "รอบนี้") + '</div>';
   } else {
-    $("ccList").innerHTML = people.map((p) => {
+    $("ccList").innerHTML = people.map((p, idx) => {
       const remColor = p.remaining >= 0 ? "var(--win)" : "var(--loss)";
       const statusClass = "status-" + p.status;
       const adjBtns = ccIsHistory ? "" :
@@ -936,6 +948,7 @@ function renderCcState(data) {
         ? '<span class="cc-status-btn ' + statusClass + '">' + escapeHtml(p.status) + '</span>'
         : '<button type="button" class="cc-status-btn ' + statusClass + '" data-cc-status-name="' + escapeHtml(p.name) + '">' + escapeHtml(p.status) + '</button>';
       return '<div class="cc-row">' +
+        '<span class="cc-idx">' + (idx + 1) + '</span>' +
         '<span class="cc-name">' + escapeHtml(p.name) + '</span>' +
         '<span class="cc-cell"><span class="cc-cell-val plus">' + fmtNum(p.plus) + '</span>' + adjBtns + '</span>' +
         '<span class="cc-cell"><span class="cc-cell-val minus">' + fmtNum(p.minus) + '</span>' + adjBtnsMinus + '</span>' +
@@ -985,9 +998,20 @@ async function submitCcAdjust(name, bucket, amount) {
   }
 }
 
+function showCcAddInput() {
+  $("ccAddNameBtn").style.display = "none";
+  $("ccAddInputRow").style.display = "flex";
+  $("ccAddNameInput").value = "";
+  $("ccAddNameInput").focus();
+}
+function hideCcAddInput() {
+  $("ccAddInputRow").style.display = "none";
+  $("ccAddNameBtn").style.display = "";
+}
+
 async function submitCcAddName() {
-  const name = (window.prompt("ชื่อลูกค้าใหม่?", "") || "").trim();
-  if (!name) return;
+  const name = $("ccAddNameInput").value.trim();
+  if (!name) { hideCcAddInput(); return; }
   try {
     const res = await fetch(SUBMIT_URL, {
       method: "POST",
@@ -1091,7 +1115,11 @@ function init() {
   $("ccModalClose").addEventListener("click", () => {
     $("ccModal").classList.remove("show");
   });
-  $("ccAddNameBtn").addEventListener("click", submitCcAddName);
+  $("ccAddNameBtn").addEventListener("click", showCcAddInput);
+  $("ccAddNameConfirmBtn").addEventListener("click", submitCcAddName);
+  $("ccAddNameInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitCcAddName();
+  });
   $("ccSearchBtn").addEventListener("click", () => {
     const d = $("ccDateInput").value;
     if (!d) return;
