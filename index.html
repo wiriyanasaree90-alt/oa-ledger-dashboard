@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>OA Ledger — มอนิเตอร์</title>
 <style>
   :root {
@@ -155,9 +158,14 @@
   }
   .cc-btn:active { transform: scale(0.95); }
   .cc-history-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-  .cc-history-row input[type="date"] {
-    flex: 1; background: var(--bg); border: 1px solid var(--gold-dim); border-radius: 8px;
+  .cc-date-wrap { position: relative; flex: 1; display: flex; }
+  .cc-date-wrap input#ccDateDisplay {
+    width: 100%; background: var(--bg); border: 1px solid var(--gold-dim); border-radius: 8px;
     color: var(--white); padding: 8px; font-size: 13px;
+  }
+  .cc-date-native {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: 0; border: none; padding: 0; margin: 0; cursor: pointer;
   }
   .cc-history-row button {
     flex: 0 0 auto; background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
@@ -480,7 +488,10 @@
       <div class="modal-title">ตารางการประกอบการวันนี้</div>
       <div class="modal-sub" id="ccSub">ตั้งแต่เริ่มรอบล่าสุด (ST)</div>
       <div class="cc-history-row">
-        <input type="date" id="ccDateInput" />
+        <div class="cc-date-wrap">
+          <input type="text" id="ccDateDisplay" placeholder="วว/ดด/พศ" readonly />
+          <input type="date" id="ccDateInput" class="cc-date-native" />
+        </div>
         <button type="button" id="ccSearchBtn">ค้นหา</button>
         <button type="button" id="ccLiveBtn" style="display:none;">รอบปัจจุบัน</button>
       </div>
@@ -900,12 +911,23 @@ let ccIsHistory = false;
 let ccHistoryDate = null;
 let pendingCcStatusName = null;
 
+// native <input type="date"> value is always ISO yyyy-mm-dd -- convert to
+// Thai display format วว/ดด/พศ (Buddhist year) for the readonly text field
+function toBuddhistDisplay(isoDateStr) {
+  if (!isoDateStr) return "";
+  const parts = isoDateStr.split("-");
+  if (parts.length !== 3) return "";
+  const [y, m, d] = parts;
+  return d + "/" + m + "/" + (Number(y) + 543);
+}
+
 function showCcModal() {
   $("ccList").innerHTML = '<div class="summary-empty">กำลังโหลด...</div>';
   $("ccModal").classList.add("show");
   ccIsHistory = false;
   ccHistoryDate = null;
   $("ccDateInput").value = "";
+  $("ccDateDisplay").value = "";
   $("ccLiveBtn").style.display = "none";
   hideCcAddInput();
   loadCcState();
@@ -1135,6 +1157,9 @@ function init() {
   $("ccAddNameInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") submitCcAddName();
   });
+  $("ccDateInput").addEventListener("change", () => {
+    $("ccDateDisplay").value = toBuddhistDisplay($("ccDateInput").value);
+  });
   $("ccSearchBtn").addEventListener("click", () => {
     const d = $("ccDateInput").value;
     if (!d) return;
@@ -1143,6 +1168,7 @@ function init() {
   $("ccLiveBtn").addEventListener("click", () => {
     ccIsHistory = false;
     $("ccDateInput").value = "";
+    $("ccDateDisplay").value = "";
     loadCcState();
   });
   $("ccStatusCancel").addEventListener("click", () => {
