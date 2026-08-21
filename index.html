@@ -145,6 +145,52 @@
   }
   .person-summary-btn:active { transform: scale(0.95); }
 
+  /* ---------------- CC ledger ("ตารางการประกอบการวันนี้") ---------------- */
+  .cc-btn {
+    position: fixed; top: 60px; right: 14px; z-index: 50;
+    background: linear-gradient(180deg, #FFE9A8, #D9A93A); color: #1a1400;
+    border: 1px solid var(--gold); border-radius: 10px; padding: 8px 10px;
+    font-weight: 800; font-size: 11px; letter-spacing: 0.3px;
+    box-shadow: 0 0 10px rgba(255, 216, 115, 0.35);
+  }
+  .cc-btn:active { transform: scale(0.95); }
+  .cc-history-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .cc-history-row input[type="date"] {
+    flex: 1; background: var(--bg); border: 1px solid var(--gold-dim); border-radius: 8px;
+    color: var(--white); padding: 8px; font-size: 13px;
+  }
+  .cc-history-row button {
+    flex: 0 0 auto; background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
+    border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 700;
+  }
+  .cc-row {
+    display: flex; align-items: center; gap: 6px; padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06); font-size: 13px;
+  }
+  .cc-row:last-child { border-bottom: none; }
+  .cc-name { flex: 2; color: var(--white); word-break: break-word; }
+  .cc-cell { flex: 1.3; display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
+  .cc-cell-val { font-weight: 700; min-width: 42px; text-align: right; }
+  .cc-cell-val.plus { color: var(--win); }
+  .cc-cell-val.minus { color: var(--loss); }
+  .cc-adj-btn {
+    background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
+    border-radius: 6px; width: 20px; height: 20px; font-size: 12px; line-height: 1; padding: 0;
+  }
+  .cc-remaining { flex: 1.1; text-align: right; font-weight: 800; }
+  .cc-status-btn {
+    flex: 0 0 auto; border-radius: 8px; padding: 4px 6px; font-size: 10px; font-weight: 700;
+    border: 1px solid; background: transparent; white-space: nowrap;
+  }
+  .cc-status-btn.status-ค้าง { color: var(--muted); border-color: var(--muted); }
+  .cc-status-btn.status-จ่ายแล้ว { color: var(--win); border-color: var(--win); }
+  .cc-status-btn.status-ยืม { color: #F0A830; border-color: #F0A830; }
+  .cc-add-row { margin-top: 10px; }
+  .cc-add-row button {
+    width: 100%; background: transparent; border: 1px dashed var(--gold-dim); color: var(--gold);
+    border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 700;
+  }
+
   /* ---------------- editable name (pencil button next to a name) ---------------- */
   .edit-name-btn {
     flex: 0 0 auto; background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
@@ -310,6 +356,7 @@
   </div>
 
   <button class="person-summary-btn" id="btnPersonSummary">📊 รายบุคคล</button>
+  <button class="cc-btn" id="btnCc">📒 CC</button>
 
   <div class="controls">
     <div class="confirm-box" id="confirmBox">
@@ -386,6 +433,40 @@
       <div id="personSummaryList"></div>
       <div class="summary-total"><span>รวมสุทธิ</span><span id="personSummaryGrandTotal">+0</span></div>
       <button class="modal-btn-close" id="personSummaryClose">ปิด</button>
+    </div>
+  </div>
+
+  <!-- CC ledger ("ตารางการประกอบการวันนี้") — persistent per-customer ยอดบวก/
+       ยอดลบ/คงเหลือ, separate from the fight-by-fight betting log above.
+       Resets on ST only (not End). -->
+  <div class="modal-overlay" id="ccModal">
+    <div class="modal-box">
+      <div class="modal-title">ตารางการประกอบการวันนี้</div>
+      <div class="modal-sub" id="ccSub">ตั้งแต่เริ่มรอบล่าสุด (ST)</div>
+      <div class="cc-history-row">
+        <input type="date" id="ccDateInput" />
+        <button type="button" id="ccSearchBtn">ค้นหา</button>
+        <button type="button" id="ccLiveBtn" style="display:none;">รอบปัจจุบัน</button>
+      </div>
+      <div id="ccList"></div>
+      <div class="cc-add-row" id="ccAddRow">
+        <button type="button" id="ccAddNameBtn">+ เพิ่มชื่อ</button>
+      </div>
+      <div class="summary-total"><span>รวมคงเหลือ</span><span id="ccGrandTotal">+0</span></div>
+      <button class="modal-btn-close" id="ccModalClose">ปิด</button>
+    </div>
+  </div>
+
+  <!-- floating status picker for one CC row: ค้าง (default) / จ่ายแล้ว / ยืม -->
+  <div class="modal-overlay" id="ccStatusModal">
+    <div class="modal-box">
+      <div class="modal-title">สถานะ: <span id="ccStatusName"></span></div>
+      <div class="modal-actions" style="flex-direction: column; gap: 8px;">
+        <button class="modal-btn-cancel" data-status="ค้าง" id="ccStatusPending">ค้าง</button>
+        <button class="modal-btn-cancel" data-status="จ่ายแล้ว" id="ccStatusPaid">จ่ายแล้ว</button>
+        <button class="modal-btn-cancel" data-status="ยืม" id="ccStatusBorrowed">ยืม</button>
+      </div>
+      <button class="modal-btn-close" id="ccStatusCancel">ยกเลิก</button>
     </div>
   </div>
 
@@ -580,8 +661,14 @@ function showEndModal(data) {
 }
 
 // ---------------- payout checklist modal (shown right after settling a match) ----------------
+// ticked = paid/collected on the spot, doesn't touch the CC ledger.
+// left unticked = carries over into the CC ledger's ยอดบวก/ยอดลบ automatically
+// once "ถัดไป" is pressed -- so, unlike before, ticking everything is no
+// longer required to proceed.
+let payoutRowsData = [];
 function showPayoutChecklist(data) {
   const rows = data.settledRows || [];
+  payoutRowsData = rows;
   $("payoutTitle").textContent = "สรุปคู่ที่ " + (data.settledFightNo != null ? data.settledFightNo : "") + " — " + (data.resultLabel || "");
 
   let subtotal = 0;
@@ -603,22 +690,18 @@ function showPayoutChecklist(data) {
   $("payoutList").innerHTML = html || '<div class="summary-empty">ไม่มีแผลในคู่นี้ครับ</div>';
   $("payoutSubtotal").textContent = fmtPl(subtotal);
   $("payoutSubtotal").style.color = subtotal >= 0 ? "var(--gold)" : "var(--loss)";
+  $("payoutSub").textContent = "ติ๊ก = จ่าย/เก็บเรียบร้อยแล้ว | ไม่ติ๊ก = เข้าตาราง CC อัตโนมัติ";
 
   const btn = $("payoutContinueBtn");
+  btn.disabled = false;
+  btn.textContent = "ถัดไป (เริ่มคู่ใหม่)";
   const checkboxes = Array.from(document.querySelectorAll(".payout-check"));
-  function updateBtn() {
-    const allChecked = checkboxes.length === 0 || checkboxes.every((c) => c.checked);
-    btn.disabled = !allChecked;
-    btn.textContent = allChecked ? "ถัดไป (เริ่มคู่ใหม่)" : "ติ๊กให้ครบทุกแผลก่อน";
-  }
   checkboxes.forEach((c) => {
     c.addEventListener("change", () => {
       const row = c.closest(".payout-row");
       if (row) row.classList.toggle("checked", c.checked);
-      updateBtn();
     });
   });
-  updateBtn();
 
   document.querySelectorAll("#payoutList [data-edit-id]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -750,6 +833,159 @@ function renderPersonSummary(data) {
   });
 }
 
+// ---------------- CC ledger ("ตารางการประกอบการวันนี้") ----------------
+// Live round by default (since latest ST); ccIsHistory / ccHistoryDate track
+// whether we're currently looking at a past calendar day instead (read-only
+// there -- no +/-, add-name, or status changes, since editing a bygone day
+// doesn't map cleanly onto "the current round").
+let ccIsHistory = false;
+let ccHistoryDate = null;
+let pendingCcStatusName = null;
+
+function showCcModal() {
+  $("ccList").innerHTML = '<div class="summary-empty">กำลังโหลด...</div>';
+  $("ccModal").classList.add("show");
+  ccIsHistory = false;
+  ccHistoryDate = null;
+  $("ccDateInput").value = "";
+  $("ccLiveBtn").style.display = "none";
+  loadCcState();
+}
+
+async function loadCcState(dateStr) {
+  try {
+    const body = { token: TOKEN, type: "ccState" };
+    if (dateStr) body.date = dateStr;
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      $("ccList").innerHTML = '<div class="summary-empty">' + escapeHtml(data.error || "โหลดไม่สำเร็จ") + '</div>';
+      return;
+    }
+    ccIsHistory = !!data.isHistory;
+    ccHistoryDate = data.date || null;
+    renderCcState(data);
+  } catch (e) {
+    $("ccList").innerHTML = '<div class="summary-empty">เกิดข้อผิดพลาด ลองใหม่อีกครั้ง</div>';
+    console.error(e);
+  }
+}
+
+function renderCcState(data) {
+  $("ccSub").textContent = ccIsHistory
+    ? "ย้อนหลังวันที่ " + escapeHtml(ccHistoryDate || "")
+    : (data.sessionLabel || "ตั้งแต่เริ่มรอบล่าสุด (ST)");
+  $("ccLiveBtn").style.display = ccIsHistory ? "" : "none";
+  $("ccAddRow").style.display = ccIsHistory ? "none" : "";
+
+  const people = data.people || [];
+  if (!people.length) {
+    $("ccList").innerHTML = '<div class="summary-empty">ยังไม่มีรายชื่อในตาราง CC ' + (ccIsHistory ? "วันนี้" : "รอบนี้") + '</div>';
+  } else {
+    $("ccList").innerHTML = people.map((p) => {
+      const remColor = p.remaining >= 0 ? "var(--win)" : "var(--loss)";
+      const statusClass = "status-" + p.status;
+      const adjBtns = ccIsHistory ? "" :
+        '<button type="button" class="cc-adj-btn" data-cc-adj-name="' + escapeHtml(p.name) + '" data-cc-adj-bucket="plus" data-cc-adj-sign="1">+</button>' +
+        '<button type="button" class="cc-adj-btn" data-cc-adj-name="' + escapeHtml(p.name) + '" data-cc-adj-bucket="plus" data-cc-adj-sign="-1">-</button>';
+      const adjBtnsMinus = ccIsHistory ? "" :
+        '<button type="button" class="cc-adj-btn" data-cc-adj-name="' + escapeHtml(p.name) + '" data-cc-adj-bucket="minus" data-cc-adj-sign="1">+</button>' +
+        '<button type="button" class="cc-adj-btn" data-cc-adj-name="' + escapeHtml(p.name) + '" data-cc-adj-bucket="minus" data-cc-adj-sign="-1">-</button>';
+      const statusBtn = ccIsHistory
+        ? '<span class="cc-status-btn ' + statusClass + '">' + escapeHtml(p.status) + '</span>'
+        : '<button type="button" class="cc-status-btn ' + statusClass + '" data-cc-status-name="' + escapeHtml(p.name) + '">' + escapeHtml(p.status) + '</button>';
+      return '<div class="cc-row">' +
+        '<span class="cc-name">' + escapeHtml(p.name) + '</span>' +
+        '<span class="cc-cell"><span class="cc-cell-val plus">' + fmtPl(p.plus) + '</span>' + adjBtns + '</span>' +
+        '<span class="cc-cell"><span class="cc-cell-val minus">' + fmtPl(p.minus) + '</span>' + adjBtnsMinus + '</span>' +
+        '<span class="cc-remaining" style="color:' + remColor + '">' + fmtPl(p.remaining) + '</span>' +
+        statusBtn +
+        '</div>';
+    }).join("");
+  }
+  $("ccGrandTotal").textContent = fmtPl(data.grandRemaining);
+  $("ccGrandTotal").style.color = Number(data.grandRemaining) >= 0 ? "var(--win)" : "var(--loss)";
+
+  document.querySelectorAll("[data-cc-adj-name]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const name = btn.getAttribute("data-cc-adj-name");
+      const bucket = btn.getAttribute("data-cc-adj-bucket");
+      const sign = Number(btn.getAttribute("data-cc-adj-sign"));
+      const label = bucket === "plus" ? "ยอดบวก" : "ยอดลบ";
+      const input = window.prompt((sign > 0 ? "เพิ่ม" : "ลด") + label + " ของ " + name + " เท่าไหร่ (บาท)?", "");
+      if (input == null) return;
+      const amt = Number(input);
+      if (!Number.isFinite(amt) || amt <= 0) return;
+      submitCcAdjust(name, bucket, amt * sign);
+    });
+  });
+  document.querySelectorAll("[data-cc-status-name]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pendingCcStatusName = btn.getAttribute("data-cc-status-name");
+      $("ccStatusName").textContent = pendingCcStatusName;
+      $("ccStatusModal").classList.add("show");
+    });
+  });
+}
+
+async function submitCcAdjust(name, bucket, amount) {
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, type: "ccAdjust", name, bucket, amount }),
+    });
+    const data = await res.json();
+    if (!data.ok) { $("micStatus").textContent = data.error || "ปรับยอดไม่สำเร็จ"; return; }
+    ccIsHistory = false;
+    renderCcState(data);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function submitCcAddName() {
+  const name = (window.prompt("ชื่อลูกค้าใหม่?", "") || "").trim();
+  if (!name) return;
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, type: "ccAddName", name }),
+    });
+    const data = await res.json();
+    if (!data.ok) { $("micStatus").textContent = data.error || "เพิ่มชื่อไม่สำเร็จ"; return; }
+    ccIsHistory = false;
+    renderCcState(data);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function submitCcStatus(status) {
+  const name = pendingCcStatusName;
+  $("ccStatusModal").classList.remove("show");
+  if (!name) return;
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, type: "ccSetStatus", name, status }),
+    });
+    const data = await res.json();
+    if (!data.ok) { $("micStatus").textContent = data.error || "เปลี่ยนสถานะไม่สำเร็จ"; return; }
+    ccIsHistory = false;
+    renderCcState(data);
+  } catch (e) {
+    console.error(e);
+  }
+  pendingCcStatusName = null;
+}
+
 function init() {
   poll();
   setInterval(poll, 4000);
@@ -812,6 +1048,36 @@ function init() {
   $("btnPersonSummary").addEventListener("click", () => {
     showPersonSummaryModal();
   });
+  $("btnCc").addEventListener("click", () => {
+    showCcModal();
+  });
+  $("ccModalClose").addEventListener("click", () => {
+    $("ccModal").classList.remove("show");
+  });
+  $("ccAddNameBtn").addEventListener("click", submitCcAddName);
+  $("ccSearchBtn").addEventListener("click", () => {
+    const d = $("ccDateInput").value;
+    if (!d) return;
+    loadCcState(d);
+  });
+  $("ccLiveBtn").addEventListener("click", () => {
+    ccIsHistory = false;
+    $("ccDateInput").value = "";
+    loadCcState();
+  });
+  $("ccStatusCancel").addEventListener("click", () => {
+    $("ccStatusModal").classList.remove("show");
+    pendingCcStatusName = null;
+  });
+  $("ccStatusPending").addEventListener("click", () => submitCcStatus("ค้าง"));
+  $("ccStatusPaid").addEventListener("click", () => submitCcStatus("จ่ายแล้ว"));
+  $("ccStatusBorrowed").addEventListener("click", () => submitCcStatus("ยืม"));
+
+  // "CC" LINE command links here with ?view=cc so it opens straight to the
+  // ledger instead of the main betting screen
+  if (params.get("view") === "cc") {
+    showCcModal();
+  }
 
   $("renameModalNo").addEventListener("click", hideRenameModal);
   $("renameModalYes").addEventListener("click", submitRename);
@@ -831,9 +1097,25 @@ function init() {
   $("endModalClose").addEventListener("click", () => {
     $("endModal").classList.remove("show");
   });
-  $("payoutContinueBtn").addEventListener("click", () => {
+  $("payoutContinueBtn").addEventListener("click", async () => {
     if ($("payoutContinueBtn").disabled) return;
+    const checkboxes = Array.from(document.querySelectorAll(".payout-check"));
+    const uncheckedIds = checkboxes
+      .filter((c) => !c.checked)
+      .map((c) => payoutRowsData[Number(c.getAttribute("data-idx"))]?.id)
+      .filter(Boolean);
     $("payoutModal").classList.remove("show");
+    if (uncheckedIds.length) {
+      try {
+        await fetch(SUBMIT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: TOKEN, type: "ccCarryover", entryIds: uncheckedIds }),
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
     poll();
   });
 
