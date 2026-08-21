@@ -133,6 +133,40 @@
   .action-btn.draw { border-color: var(--muted); color: var(--white); }
   .action-btn.end { border-color: var(--gold-dim); color: var(--gold); }
 
+  /* ---------------- person-summary shortcut button ---------------- */
+  .person-summary-btn {
+    width: 100%; max-width: 480px; margin: 0 auto 12px; display: block;
+    background: linear-gradient(180deg, #1c1f3d, #0f1226); color: var(--gold);
+    border: 1px solid var(--gold); border-radius: 12px; padding: 12px;
+    font-weight: 800; font-size: 13px; letter-spacing: 0.5px;
+  }
+  .person-summary-btn:active { transform: scale(0.98); }
+
+  /* ---------------- editable name (pencil button next to a name) ---------------- */
+  .edit-name-btn {
+    flex: 0 0 auto; background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
+    border-radius: 6px; font-size: 11px; padding: 3px 6px; line-height: 1;
+  }
+  .edit-name-btn:active { background: var(--gold); color: #1a1400; }
+  .rename-input-row { display: flex; gap: 8px; margin-bottom: 4px; }
+  .rename-input-row input {
+    flex: 1; background: var(--bg); border: 1px solid var(--gold); border-radius: 8px;
+    color: var(--white); padding: 10px 12px; font-size: 15px;
+  }
+
+  /* ---------------- per-person summary modal ---------------- */
+  .person-group { border-bottom: 1px dashed #2A2E4A; padding: 10px 0; }
+  .person-group:last-child { border-bottom: none; }
+  .person-group-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .person-group-name { font-weight: 800; font-size: 14px; color: var(--white); word-break: break-word; }
+  .person-group-count { color: var(--muted); font-size: 11px; margin-left: 6px; }
+  .person-group-subtotal { font-weight: 800; font-size: 15px; flex: 0 0 auto; }
+  .person-entry-row {
+    display: flex; align-items: center; gap: 6px; padding: 5px 0 5px 10px; font-size: 12px; color: var(--muted);
+  }
+  .person-entry-text { flex: 1; word-break: break-word; }
+  .person-entry-pl { flex: 0 0 auto; font-weight: 700; min-width: 50px; text-align: right; }
+
   /* ---------------- bottom controls ---------------- */
   .controls {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -262,6 +296,8 @@
     </div>
   </div>
 
+  <button class="person-summary-btn" id="btnPersonSummary">📊 สรุปยอดรายบุคคล (รอบนี้)</button>
+
   <div class="controls">
     <div class="confirm-box" id="confirmBox">
       <input type="text" id="confirmText" />
@@ -309,6 +345,31 @@
       <div id="payoutList"></div>
       <div class="summary-total"><span>รวมคู่นี้</span><span id="payoutSubtotal">+0</span></div>
       <button class="modal-btn-close" id="payoutContinueBtn" disabled>ติ๊กให้ครบทุกแผลก่อน</button>
+    </div>
+  </div>
+
+  <!-- rename modal — fix a mistranscribed/missing name on any entry (pending or already-settled) -->
+  <div class="modal-overlay" id="renameModal">
+    <div class="modal-box">
+      <div class="modal-title">แก้ไข/เพิ่มชื่อ</div>
+      <div class="rename-input-row">
+        <input type="text" id="renameInput" placeholder="พิมพ์ชื่อลูกค้า" />
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" id="renameModalNo">ยกเลิก</button>
+        <button class="modal-btn-confirm" id="renameModalYes">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- per-person summary modal (since last ST) — how many entries & net win/loss per customer -->
+  <div class="modal-overlay" id="personSummaryModal">
+    <div class="modal-box">
+      <div class="modal-title">สรุปยอดรายบุคคล</div>
+      <div class="modal-sub" id="personSummarySub">ตั้งแต่เริ่มรอบล่าสุด (ST)</div>
+      <div id="personSummaryList"></div>
+      <div class="summary-total"><span>รวมสุทธิ</span><span id="personSummaryGrandTotal">+0</span></div>
+      <button class="modal-btn-close" id="personSummaryClose">ปิด</button>
     </div>
   </div>
 
@@ -379,6 +440,7 @@ function render(data) {
     return '<div class="log-row"><span class="dot ' + dotClass + '">●</span>' +
       '<span class="log-text">' + escapeHtml(normalizeEntryText(e)) + '</span>' +
       '<span class="log-name">' + escapeHtml(name) + '</span>' +
+      '<button class="edit-name-btn" data-edit-id="' + escapeHtml(e.id) + '" data-edit-name="' + escapeHtml(name === "-" ? "" : name) + '">✎</button>' +
       '<button class="cancel-entry-btn" data-cancel-id="' + escapeHtml(e.id) + '">ยกเลิก</button></div>';
   });
   $("logList").innerHTML = rows.length ? rows.join("") : '<div class="empty">ยังไม่มีแผลเล่นในไฟต์นี้</div>';
@@ -391,6 +453,13 @@ function render(data) {
       showConfirmModal("ยกเลิกแผลนี้?", "แผลนี้จะถูกตัดออกจากบันทึก ยืนยันหรือไม่?", () => {
         submitAction({ type: "cancel", entryId: id }, "ยกเลิกแผลแล้ว ✓");
       });
+    });
+  });
+  document.querySelectorAll("#logList [data-edit-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-edit-id");
+      const nm = btn.getAttribute("data-edit-name");
+      openRenameModal(id, nm, null); // poll() (below) already refreshes this list on success
     });
   });
 }
@@ -505,6 +574,7 @@ function showPayoutChecklist(data) {
       '<span class="dot ' + dotClass + '">●</span>' +
       '<span class="payout-text">' + escapeHtml(normalizeEntryText(r)) + '</span>' +
       '<span class="payout-name">' + escapeHtml(name) + '</span>' +
+      '<button class="edit-name-btn" data-edit-id="' + escapeHtml(r.id) + '" data-edit-name="' + escapeHtml(name === "-" ? "" : name) + '">✎</button>' +
       '<span class="payout-pl" style="color:' + plColor + '">' + fmtPl(pl) + '</span>' +
       '</label>';
   }).join("");
@@ -528,7 +598,133 @@ function showPayoutChecklist(data) {
   });
   updateBtn();
 
+  document.querySelectorAll("#payoutList [data-edit-id]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      // rows are <label> elements wrapping the checkbox -- stop the click
+      // from also toggling it
+      e.preventDefault();
+      e.stopPropagation();
+      const id = btn.getAttribute("data-edit-id");
+      const nm = btn.getAttribute("data-edit-name");
+      openRenameModal(id, nm, (newName) => {
+        const row = btn.closest(".payout-row");
+        const nameSpan = row ? row.querySelector(".payout-name") : null;
+        if (nameSpan) nameSpan.textContent = newName;
+        btn.setAttribute("data-edit-name", newName);
+      });
+    });
+  });
+
   $("payoutModal").classList.add("show");
+}
+
+// ---------------- rename modal — fix a mistranscribed/missing name on any
+// entry (pending or already-settled) ----------------
+let renameTargetId = null;
+let renameOnSaved = null;
+function openRenameModal(entryId, currentName, onSaved) {
+  renameTargetId = entryId;
+  renameOnSaved = onSaved || null;
+  $("renameInput").value = currentName || "";
+  $("renameModal").classList.add("show");
+  setTimeout(() => $("renameInput").focus(), 50);
+}
+function hideRenameModal() {
+  $("renameModal").classList.remove("show");
+  renameTargetId = null;
+  renameOnSaved = null;
+}
+async function submitRename() {
+  const name = $("renameInput").value.trim();
+  if (!renameTargetId) { hideRenameModal(); return; }
+  if (!name) { $("renameInput").focus(); return; }
+  const idToRename = renameTargetId;
+  const cb = renameOnSaved;
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, type: "rename", entryId: idToRename, name }),
+    });
+    const data = await res.json();
+    hideRenameModal();
+    if (!data.ok) {
+      $("micStatus").textContent = data.error || "แก้ไขชื่อไม่สำเร็จ";
+      return;
+    }
+    if (cb) cb(name);
+    poll();
+  } catch (e) {
+    hideRenameModal();
+    $("micStatus").textContent = "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง";
+    console.error(e);
+  }
+}
+
+// ---------------- per-person summary modal (since last ST) ----------------
+async function showPersonSummaryModal() {
+  $("personSummaryList").innerHTML = '<div class="summary-empty">กำลังโหลด...</div>';
+  $("personSummaryModal").classList.add("show");
+  await loadPersonSummary();
+}
+async function loadPersonSummary() {
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, type: "personSummary" }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      $("personSummaryList").innerHTML = '<div class="summary-empty">' + escapeHtml(data.error || "โหลดไม่สำเร็จ") + '</div>';
+      return;
+    }
+    renderPersonSummary(data);
+  } catch (e) {
+    $("personSummaryList").innerHTML = '<div class="summary-empty">เกิดข้อผิดพลาด ลองใหม่อีกครั้ง</div>';
+    console.error(e);
+  }
+}
+function renderPersonSummary(data) {
+  $("personSummarySub").textContent = data.sessionLabel || "ตั้งแต่เริ่มรอบล่าสุด (ST)";
+  const people = data.people || [];
+  if (!people.length) {
+    $("personSummaryList").innerHTML = '<div class="summary-empty">ยังไม่มีแผลที่ประกาศผลในรอบนี้ครับ</div>';
+  } else {
+    $("personSummaryList").innerHTML = people.map((p) => {
+      const subColor = Number(p.subtotal) >= 0 ? "var(--gold)" : "var(--loss)";
+      const nameForEdit = p.name === "ไม่ระบุชื่อ" ? "" : p.name;
+      const entriesHtml = (p.entries || []).map((r) => {
+        const pl = Number(r.actual_pl) || 0;
+        const plColor = pl >= 0 ? "var(--gold)" : "var(--loss)";
+        return '<div class="person-entry-row">' +
+          '<span class="person-entry-text">' + escapeHtml(normalizeEntryText(r)) + '</span>' +
+          '<button class="edit-name-btn" data-edit-id="' + escapeHtml(r.id) + '" data-edit-name="' + escapeHtml(nameForEdit) + '">✎</button>' +
+          '<span class="person-entry-pl" style="color:' + plColor + '">' + fmtPl(pl) + '</span>' +
+          '</div>';
+      }).join("");
+      return '<div class="person-group">' +
+        '<div class="person-group-header">' +
+          '<span class="person-group-name">' + escapeHtml(p.name) + '<span class="person-group-count">(' + p.count + ' แผล)</span></span>' +
+          '<span class="person-group-subtotal" style="color:' + subColor + '">' + fmtPl(p.subtotal) + '</span>' +
+        '</div>' +
+        entriesHtml +
+        '</div>';
+    }).join("");
+  }
+  $("personSummaryGrandTotal").textContent = fmtPl(data.grandTotal);
+  $("personSummaryGrandTotal").style.color = Number(data.grandTotal) >= 0 ? "var(--gold)" : "var(--loss)";
+
+  document.querySelectorAll("#personSummaryList [data-edit-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-edit-id");
+      const nm = btn.getAttribute("data-edit-name");
+      openRenameModal(id, nm, () => {
+        // re-fetch + re-render so entries regroup under the corrected name
+        loadPersonSummary();
+      });
+    });
+  });
 }
 
 function init() {
@@ -576,6 +772,18 @@ function init() {
   });
   $("btnEnd").addEventListener("click", () => {
     submitAction({ type: "end" });
+  });
+  $("btnPersonSummary").addEventListener("click", () => {
+    showPersonSummaryModal();
+  });
+
+  $("renameModalNo").addEventListener("click", hideRenameModal);
+  $("renameModalYes").addEventListener("click", submitRename);
+  $("renameInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitRename();
+  });
+  $("personSummaryClose").addEventListener("click", () => {
+    $("personSummaryModal").classList.remove("show");
   });
 
   $("confirmModalNo").addEventListener("click", hideConfirmModal);
