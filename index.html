@@ -16,6 +16,7 @@
     --white: #F5F5F7;
     --muted: #9AA0B4;
     --loss: #F87171;
+    --win: #4ADE80;
   }
   * { box-sizing: border-box; }
   body {
@@ -133,14 +134,15 @@
   .action-btn.draw { border-color: var(--muted); color: var(--white); }
   .action-btn.end { border-color: var(--gold-dim); color: var(--gold); }
 
-  /* ---------------- person-summary shortcut button ---------------- */
+  /* ---------------- person-summary shortcut button (fixed, top-right) ---------------- */
   .person-summary-btn {
-    width: 100%; max-width: 480px; margin: 0 auto 12px; display: block;
-    background: linear-gradient(180deg, #1c1f3d, #0f1226); color: var(--gold);
-    border: 1px solid var(--gold); border-radius: 12px; padding: 12px;
-    font-weight: 800; font-size: 13px; letter-spacing: 0.5px;
+    position: fixed; top: 14px; right: 14px; z-index: 50;
+    background: linear-gradient(180deg, #4FC3F7, #0EA5E9); color: #06202e;
+    border: 1px solid var(--blue); border-radius: 10px; padding: 8px 10px;
+    font-weight: 800; font-size: 11px; letter-spacing: 0.3px;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
   }
-  .person-summary-btn:active { transform: scale(0.98); }
+  .person-summary-btn:active { transform: scale(0.95); }
 
   /* ---------------- editable name (pencil button next to a name) ---------------- */
   .edit-name-btn {
@@ -174,10 +176,19 @@
     padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 10px; align-items: center;
   }
   .text-row { display: flex; gap: 8px; width: 100%; max-width: 480px; }
+  .input-wrap { position: relative; flex: 1; display: flex; }
   .text-row input {
     flex: 1; background: var(--panel); border: 1px solid var(--gold); border-radius: 8px;
-    color: var(--white); padding: 10px 12px; font-size: 15px;
+    color: var(--white); padding: 10px 34px 10px 12px; font-size: 15px; width: 100%;
   }
+  .clear-input-btn {
+    display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--muted); font-size: 18px; line-height: 1;
+    width: 28px; height: 28px; border-radius: 50%; align-items: center; justify-content: center;
+    padding: 0; cursor: pointer;
+  }
+  .clear-input-btn.show { display: flex; }
+  .clear-input-btn:active { background: rgba(255, 255, 255, 0.12); }
   .text-row button {
     background: linear-gradient(180deg, #FFE9A8, #D9A93A); color: #1a1400; border: none; border-radius: 8px;
     padding: 10px 16px; font-weight: 800; font-size: 14px;
@@ -296,7 +307,7 @@
     </div>
   </div>
 
-  <button class="person-summary-btn" id="btnPersonSummary">📊 สรุปยอดรายบุคคล (รอบนี้)</button>
+  <button class="person-summary-btn" id="btnPersonSummary">📊 รายบุคคล</button>
 
   <div class="controls">
     <div class="confirm-box" id="confirmBox">
@@ -307,7 +318,10 @@
       </div>
     </div>
     <div class="text-row">
-      <input type="text" id="typeInput" placeholder="พิมพ์แผลเล่น เช่น 32ตด20000ชื่อ" />
+      <div class="input-wrap">
+        <input type="text" id="typeInput" placeholder="พิมพ์แผลเล่น เช่น 32ตด20000ชื่อ" />
+        <button type="button" id="btnClearInput" class="clear-input-btn" aria-label="ล้างข้อความ">✕</button>
+      </div>
       <button id="btnSend">ส่ง</button>
     </div>
     <button id="micBtn">🎤</button>
@@ -692,13 +706,14 @@ function renderPersonSummary(data) {
     $("personSummaryList").innerHTML = '<div class="summary-empty">ยังไม่มีแผลที่ประกาศผลในรอบนี้ครับ</div>';
   } else {
     $("personSummaryList").innerHTML = people.map((p) => {
-      const subColor = Number(p.subtotal) >= 0 ? "var(--gold)" : "var(--loss)";
+      const subColor = Number(p.subtotal) >= 0 ? "var(--win)" : "var(--loss)";
       const nameForEdit = p.name === "ไม่ระบุชื่อ" ? "" : p.name;
       const entriesHtml = (p.entries || []).map((r) => {
         const pl = Number(r.actual_pl) || 0;
-        const plColor = pl >= 0 ? "var(--gold)" : "var(--loss)";
+        const plColor = pl >= 0 ? "var(--win)" : "var(--loss)";
+        const fightLabel = r.fight_no != null ? "คู่ " + r.fight_no + " — " : "";
         return '<div class="person-entry-row">' +
-          '<span class="person-entry-text">' + escapeHtml(normalizeEntryText(r)) + '</span>' +
+          '<span class="person-entry-text">' + escapeHtml(fightLabel) + escapeHtml(normalizeEntryText(r)) + '</span>' +
           '<button class="edit-name-btn" data-edit-id="' + escapeHtml(r.id) + '" data-edit-name="' + escapeHtml(nameForEdit) + '">✎</button>' +
           '<span class="person-entry-pl" style="color:' + plColor + '">' + fmtPl(pl) + '</span>' +
           '</div>';
@@ -713,7 +728,7 @@ function renderPersonSummary(data) {
     }).join("");
   }
   $("personSummaryGrandTotal").textContent = fmtPl(data.grandTotal);
-  $("personSummaryGrandTotal").style.color = Number(data.grandTotal) >= 0 ? "var(--gold)" : "var(--loss)";
+  $("personSummaryGrandTotal").style.color = Number(data.grandTotal) >= 0 ? "var(--win)" : "var(--loss)";
 
   document.querySelectorAll("#personSummaryList [data-edit-id]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -734,10 +749,23 @@ function init() {
   $("btnSend").addEventListener("click", () => {
     const v = $("typeInput").value;
     $("typeInput").value = "";
+    $("btnClearInput").classList.remove("show");
     submitText(v);
   });
   $("typeInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") $("btnSend").click();
+  });
+  // clear-text (✕) button: shows only while there's text in the box, so a
+  // mis-transcribed / mis-typed entry can be wiped in one tap instead of
+  // holding backspace -- this was requested after the iPad "รวน" report,
+  // as a way to quickly reset the input box regardless of what state it's in.
+  $("typeInput").addEventListener("input", () => {
+    $("btnClearInput").classList.toggle("show", $("typeInput").value.length > 0);
+  });
+  $("btnClearInput").addEventListener("click", () => {
+    $("typeInput").value = "";
+    $("btnClearInput").classList.remove("show");
+    $("typeInput").focus();
   });
 
   $("btnCancelVoice").addEventListener("click", () => {
