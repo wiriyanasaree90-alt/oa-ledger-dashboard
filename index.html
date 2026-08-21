@@ -110,6 +110,9 @@
   .footer-row .red { color: var(--red); text-shadow: 0 0 8px rgba(255, 71, 87, 0.5); }
   .footer-row .blue { color: var(--blue); text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
   .footer-row .draw { color: var(--gold); text-shadow: 0 0 8px rgba(255, 216, 115, 0.5); text-align: center; }
+  .footer-row.will-remain { margin-top: 4px; font-weight: 600; font-size: 11px; }
+  .footer-row.will-remain span { color: var(--muted); text-shadow: none; }
+  .footer-row.will-remain .draw { text-align: center; }
   .empty { color: var(--muted); font-size: 13px; }
   .inactive { text-align: center; color: var(--muted); padding: 40px 16px; }
 
@@ -401,6 +404,11 @@
       <span class="draw" id="drawWin">Draw +0</span>
       <span class="blue" id="blueWin">Bluewin +0</span>
     </div>
+    <div class="footer-row will-remain">
+      <span id="redWillRemain">จะเหลือ +0</span>
+      <span class="draw" id="drawWillRemain">จะเหลือ +0</span>
+      <span id="blueWillRemain">จะเหลือ +0</span>
+    </div>
   </div>
 
   <div class="action-panel" id="actionPanel">
@@ -633,6 +641,13 @@ function render(data) {
   $("redWin").textContent = "Redwin " + fmtPl(redWin);
   $("drawWin").textContent = "Draw " + fmtPl(drawWin);
   $("blueWin").textContent = "Bluewin " + fmtPl(blueWin);
+  // "จะเหลือ" -- today's already-settled total (ทุน) plus/minus this fight's
+  // own Redwin/Draw/Bluewin swing, a real-time "what would I be left with"
+  // preview per outcome -- same formula as the "C" card on LINE
+  const todayTotal = Number(data.todayTotal) || 0;
+  $("redWillRemain").textContent = "จะเหลือ " + fmtPl(todayTotal + redWin);
+  $("drawWillRemain").textContent = "จะเหลือ " + fmtPl(todayTotal + drawWin);
+  $("blueWillRemain").textContent = "จะเหลือ " + fmtPl(todayTotal + blueWin);
 
   document.querySelectorAll("[data-cancel-id]").forEach((btn) => {
     btn.addEventListener("click", () => {
