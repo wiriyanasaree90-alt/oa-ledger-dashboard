@@ -191,9 +191,17 @@
   }
   .cc-header .cc-idx { color: var(--gold); font-weight: 800; }
   .cc-name {
-    flex: 2.6; color: var(--white); word-break: break-word;
+    flex: 2.6; color: var(--white);
     border-right: 1px solid rgba(255, 255, 255, 0.08); padding-right: 8px;
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
   }
+  .cc-name-text { word-break: break-word; }
+  .cc-name-icon-btn {
+    background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
+    border-radius: 5px; width: 18px; height: 18px; font-size: 10px; line-height: 1;
+    padding: 0; flex: 0 0 auto;
+  }
+  .cc-name-icon-btn.danger { color: var(--loss); border-color: var(--loss); }
   .cc-cell {
     flex: 1.1; display: flex; align-items: center; justify-content: flex-end; gap: 5px;
     border-right: 1px solid rgba(255, 255, 255, 0.08); padding-right: 8px;
@@ -220,9 +228,13 @@
   .cc-status-btn.status-จ่ายแล้ว { color: var(--win); border-color: var(--win); }
   .cc-status-btn.status-ยืม { color: #F0A830; border-color: #F0A830; }
   .cc-add-row { margin-top: 10px; }
-  .cc-add-row button {
+  .cc-add-row > button {
     width: 100%; background: transparent; border: 1px dashed var(--gold-dim); color: var(--gold);
     border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 700;
+  }
+  #ccAddInputRow input {
+    min-width: 0; /* allow the flex input to actually shrink/grow instead of
+                     being squeezed to nothing next to the "เพิ่ม" button */
   }
 
   /* ---------------- editable name (pencil button next to a name) ---------------- */
@@ -796,10 +808,20 @@ function showPayoutChecklist(data) {
 // entry (pending or already-settled) ----------------
 let renameTargetId = null;
 let renameOnSaved = null;
+let renameMode = "entry"; // "entry" (one bet_entries row) | "ccName" (every CC row under a name)
+let renameCcOldName = null;
 function openRenameModal(entryId, currentName, onSaved) {
+  renameMode = "entry";
   renameTargetId = entryId;
   renameOnSaved = onSaved || null;
   $("renameInput").value = currentName || "";
+  $("renameModal").classList.add("show");
+  setTimeout(() => $("renameInput").focus(), 50);
+}
+function openCcRenameModal(oldName) {
+  renameMode = "ccName";
+  renameCcOldName = oldName;
+  $("renameInput").value = oldName || "";
   $("renameModal").classList.add("show");
   setTimeout(() => $("renameInput").focus(), 50);
 }
@@ -807,11 +829,39 @@ function hideRenameModal() {
   $("renameModal").classList.remove("show");
   renameTargetId = null;
   renameOnSaved = null;
+  renameCcOldName = null;
+  renameMode = "entry";
 }
 async function submitRename() {
   const name = $("renameInput").value.trim();
-  if (!renameTargetId) { hideRenameModal(); return; }
   if (!name) { $("renameInput").focus(); return; }
+
+  if (renameMode === "ccName") {
+    const oldName = renameCcOldName;
+    if (!oldName) { hideRenameModal(); return; }
+    try {
+      const res = await fetch(SUBMIT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: TOKEN, type: "ccRenameName", oldName, name }),
+      });
+      const data = await res.json();
+      hideRenameModal();
+      if (!data.ok) {
+        $("micStatus").textContent = data.error || "แก้ไขชื่อไม่สำเร็จ";
+        return;
+      }
+      ccIsHistory = false;
+      renderCcState(data);
+    } catch (e) {
+      hideRenameModal();
+      $("micStatus").textContent = "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง";
+      console.error(e);
+    }
+    return;
+  }
+
+  if (!renameTargetId) { hideRenameModal(); return; }
   const idToRename = renameTargetId;
   const cb = renameOnSaved;
   try {
@@ -984,9 +1034,12 @@ function renderCcState(data) {
       const statusBtn = ccIsHistory
         ? '<span class="cc-status-btn ' + statusClass + '">' + escapeHtml(p.status) + '</span>'
         : '<button type="button" class="cc-status-btn ' + statusClass + '" data-cc-status-name="' + escapeHtml(p.name) + '">' + escapeHtml(p.status) + '</button>';
+      const nameActions = ccIsHistory ? "" :
+        '<button type="button" class="cc-name-icon-btn" data-cc-rename-name="' + escapeHtml(p.name) + '" title="แก้ไขชื่อ">✎</button>' +
+        '<button type="button" class="cc-name-icon-btn danger" data-cc-delete-name="' + escapeHtml(p.name) + '" title="ลบชื่อ">✕</button>';
       return '<div class="cc-row">' +
         '<span class="cc-idx">' + (idx + 1) + '</span>' +
-        '<span class="cc-name">' + escapeHtml(p.name) + '</span>' +
+        '<span class="cc-name"><span class="cc-name-text">' + escapeHtml(p.name) + '</span>' + nameActions + '</span>' +
         '<span class="cc-cell"><span class="cc-cell-val plus">' + fmtNum(p.plus) + '</span>' + adjBtns + '</span>' +
         '<span class="cc-cell"><span class="cc-cell-val minus">' + fmtNum(p.minus) + '</span>' + adjBtnsMinus + '</span>' +
         '<span class="cc-remaining" style="color:' + remColor + '">' + fmtNum(p.remaining) + '</span>' +
@@ -1017,6 +1070,37 @@ function renderCcState(data) {
       $("ccStatusModal").classList.add("show");
     });
   });
+  document.querySelectorAll("[data-cc-rename-name]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openCcRenameModal(btn.getAttribute("data-cc-rename-name"));
+    });
+  });
+  document.querySelectorAll("[data-cc-delete-name]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const name = btn.getAttribute("data-cc-delete-name");
+      showConfirmModal(
+        "ลบชื่อ",
+        'ลบ "' + name + '" ออกจากตาราง CC ทั้งหมด (ยอดบวก/ยอดลบ/สถานะ) ใช่ไหมครับ?',
+        () => submitCcDeleteName(name),
+      );
+    });
+  });
+}
+
+async function submitCcDeleteName(name) {
+  try {
+    const res = await fetch(SUBMIT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: TOKEN, type: "ccDeleteName", name }),
+    });
+    const data = await res.json();
+    if (!data.ok) { $("micStatus").textContent = data.error || "ลบชื่อไม่สำเร็จ"; return; }
+    ccIsHistory = false;
+    renderCcState(data);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 async function submitCcAdjust(name, bucket, amount) {
