@@ -632,7 +632,11 @@ if (!TOKEN) {
 }
 
 function fmtPl(n) {
-  n = Number(n) || 0;
+  // rounded to the nearest whole baht for display only -- some rate math
+  // (e.g. dividing a bet by 3) produces long repeating decimals like
+  // 33333.333333333336; nothing downstream stores or calculates off this
+  // string, it's purely what gets shown on screen.
+  n = Math.round(Number(n) || 0);
   return (n >= 0 ? "+" : "") + n;
 }
 
@@ -640,7 +644,7 @@ function fmtPl(n) {
 // inside the CC ledger table, where the user wants plain numbers (still
 // shows "-" for negatives, just no "+" clutter on positives/zero)
 function fmtNum(n) {
-  n = Number(n) || 0;
+  n = Math.round(Number(n) || 0);
   return String(n);
 }
 
