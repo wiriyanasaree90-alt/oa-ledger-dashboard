@@ -47,15 +47,14 @@
     50% { box-shadow: 0 0 24px rgba(255, 216, 115, 0.38), inset 0 0 18px rgba(255, 216, 115, 0.06); }
   }
   .glow-frame::before {
-    content: ""; position: absolute; top: 0; left: -25%; width: 25%; height: 2px;
+    content: ""; position: absolute; top: 0; left: 0; width: 22%; height: 2px;
     background: linear-gradient(90deg, transparent, rgba(255, 243, 196, 0.95), transparent);
-    clip-path: inset(0);
     animation: edgeSweep 5s ease-in-out infinite;
     pointer-events: none;
   }
   @keyframes edgeSweep {
-    0% { left: -25%; }
-    45%, 100% { left: 100%; }
+    0% { left: 0%; }
+    45%, 100% { left: 78%; }
   }
   /* a soft diagonal sheen sweeps across the main gold call-to-action
      buttons every few seconds -- the same "light catching metal" look
